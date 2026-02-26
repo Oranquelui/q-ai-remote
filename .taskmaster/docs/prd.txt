@@ -1,0 +1,183 @@
+# Q CodeAnzenn MVP PRD (Frozen Spec)
+
+## Product Goal
+Build a Telegram-operated secure governance MVP that never executes before explicit approval and enforces strict filesystem boundaries.
+
+## In Scope (MVP)
+- UI: Telegram commands only: /start /policy /plan /approve /reject /status /logs
+- Engine: Codex API only (no local LLM)
+- Security:
+  - /plan returns Plan + Risk only (no execution)
+  - No execution until /approve <plan_id> <short_token>
+  - Allowed Paths enforcement with hard rejection outside boundary
+  - Reject symlink/junction/UNC/absolute path in plan operations
+  - Fixed ops only: list_dir/read_file/create_file/patch_file
+  - No arbitrary command execution
+  - No network operation feature in executor
+  - Persist diff + JSONL + HTML locally with hash-chain tamper detection
+- Secrets: OS credential store only
+  - macOS Keychain
+  - Windows Credential Manager
+- OS target: macOS 13+, Windows 11+ x64
+
+## Out of Scope (MVP)
+- Cloud multi-tenant mode
+- Web UI
+- GitHub runtime dependency
+
+## Hard Constraints
+- All paths in Plan are workspace-relative only
+- Telegram must not return file body content by default
+- Telegram returns summaries and diff summaries only
+
+## Architecture Modules
+- bot listener + command handlers
+- planner (Codex API)
+- policy engine
+- risk engine
+- approval service
+- executor (safe fixed ops)
+- audit logger (JSONL hash-chain)
+- html report builder
+- secret store adapters
+- sqlite persistence
+
+## Task Breakdown (authoritative)
+
+### EPIC 1: Specification Freeze
+1) QG-E1-01 MVP 1-page requirements freeze
+- Depends: none
+- Outputs: docs/mvp_requirements.md
+- DoD: goal/non-goal/flow/prohibitions/acceptance criteria documented and approved
+- Tests: tests/docs/test_requirements_sections.py
+
+2) QG-E1-02 Repo tree definition
+- Depends: QG-E1-01
+- Outputs: docs/repo_tree.md
+- DoD: canonical structure fixed for src/config/db/audit/tests/scripts
+- Tests: tests/docs/test_repo_tree_paths.py
+
+3) QG-E1-03 policy.yaml v1
+- Depends: QG-E1-01
+- Outputs: config/policy.yaml
+- DoD: commands/ops/prohibitions/allowlist/rate-limit/path rules declared
+- Tests: tests/config/test_policy_schema.py
+
+### EPIC 2: Contracts + Secrets + DB
+4) QG-E2-01 Pydantic v2 Plan model
+- Depends: QG-E1-03
+- Outputs: src/models/plan.py
+- DoD: rejects absolute paths, enforces workspace-relative op targets
+- Tests: tests/models/test_plan_model.py
+
+5) QG-E2-02 Plan JSON Schema exporter
+- Depends: QG-E2-01
+- Outputs: scripts/export_plan_schema.py, schemas/plan.schema.json
+- DoD: deterministic schema export for CI drift checks
+- Tests: tests/schema/test_export_plan_schema.py
+
+6) QG-E2-03 SecretStore interface + loader
+- Depends: QG-E1-03
+- Outputs: src/secrets/base.py, src/secrets/factory.py, src/config/secrets.py
+- DoD: OS-based provider selection, fail-closed if missing credentials
+- Tests: tests/secrets/test_factory.py
+
+7) QG-E2-04 macOS Keychain adapter
+- Depends: QG-E2-03
+- Outputs: src/secrets/keychain_store.py
+- DoD: can retrieve codex_api_key without logging secrets
+- Tests: tests/secrets/test_keychain_store.py
+
+8) QG-E2-05 Windows Credential Manager adapter
+- Depends: QG-E2-03
+- Outputs: src/secrets/credman_store.py
+- DoD: can retrieve codex_api_key with explicit error on missing secret
+- Tests: tests/secrets/test_credman_store.py
+
+9) QG-E2-06 SQLite schema for plans/audit/events
+- Depends: QG-E2-01
+- Outputs: db/schema.sql
+- DoD: tables + indexes + state transitions support
+- Tests: tests/db/test_schema_apply.py
+
+### EPIC 3: Security Core
+10) QG-E3-01 Path Guard implementation
+- Depends: QG-E1-03
+- Outputs: src/security/path_guard.py
+- DoD: blocks outside allowed path, symlink, junction, UNC, absolute paths
+- Tests: tests/security/test_path_guard.py
+
+11) QG-E3-02 Risk engine implementation
+- Depends: QG-E2-01
+- Outputs: src/security/risk_engine.py
+- DoD: score/level/reasons generated; HIGH+ blocked
+- Tests: tests/security/test_risk_engine.py
+
+12) QG-E3-03 Approval service with short_token
+- Depends: QG-E2-01, QG-E2-06
+- Outputs: src/core/approval_service.py
+- DoD: /approve requires plan_id + short_token, token/ttl mismatch rejected
+- Tests: tests/core/test_approval_service.py
+
+### EPIC 4: Telegram Interface
+13) QG-E4-01 /start and /policy handlers
+- Depends: QG-E1-03
+- Outputs: src/bot/handlers_start_policy.py
+- DoD: fixed-format policy summary replies
+- Tests: tests/bot/test_start_policy.py
+
+14) QG-E4-02 /plan handler with planner integration
+- Depends: QG-E2-04, QG-E2-05, QG-E2-06, QG-E3-01, QG-E3-02
+- Outputs: src/core/planner.py, src/adapters/codex_client.py, src/bot/handlers_plan.py
+- DoD: returns plan+risk only, never executes, fixed concise response format
+- Tests: tests/bot/test_plan_no_execute.py
+
+15) QG-E4-03 /approve /reject /status + rate limit + allowlist
+- Depends: QG-E3-03
+- Outputs: src/bot/handlers_approval_status.py, src/security/rate_limit.py
+- DoD: allowlisted users only, approve requires 2 args, rate-limit enforced
+- Tests: tests/bot/test_approve_reject_status.py, tests/security/test_rate_limit.py
+
+### EPIC 5: Execution + Audit
+16) QG-E5-01 Executor safe ops + diff generation
+- Depends: QG-E4-03, QG-E3-01
+- Outputs: src/core/executor.py, src/core/diff_service.py
+- DoD: executes only 4 fixed ops, no command/network feature exists
+- Tests: tests/core/test_executor_allowed_ops.py, tests/core/test_diff_service.py
+
+17) QG-E5-02 JSONL hash-chain + HTML report + /logs
+- Depends: QG-E5-01, QG-E2-06
+- Outputs: src/audit/audit_logger.py, src/audit/report_builder.py, src/bot/handlers_logs.py
+- DoD: execution always emits jsonl/html artifacts; /logs resolves plan artifacts
+- Tests: tests/audit/test_hash_chain.py, tests/bot/test_logs_handler.py
+
+### EPIC 6: Security Validation + Demo
+18) QG-E6-01 Security regression suite + E2E script
+- Depends: QG-E5-02
+- Outputs: tests/security/test_regressions.py, docs/demo_script.md
+- DoD: pass scenarios: path bypass, pre-approve execution, secret leakage, rate limit
+- Tests: tests/security/test_regressions.py::all
+
+## Gates
+- GATE-A: Spec freeze complete (E1 done)
+- GATE-S1: SecretStore ready before planner integration
+- GATE-B: Security invariants complete before execution merge
+- GATE-C: Acceptance complete after regressions + demo
+
+## Acceptance Criteria
+- No side effects before approval
+- 100% rejection for outside-allowed path attempts
+- No arbitrary command execution path exists
+- No executor network operation path exists
+- Diff + JSONL(hash-chain) + HTML generated after writes
+- /approve requires plan_id and short_token
+
+## Post-Freeze UX Patch (2026-02-26)
+- setup wizard input order updated for onboarding clarity:
+  1) language
+  2) setup type (first/add bot)
+  3) instance_id
+  4) telegram_bot_token (mandatory, verified with getMe)
+  5) engine mode
+  6) allowlist user id (optional auto-detect via getUpdates after user sends /start)
+- Rationale: avoid confusion between user_id retrieval and bot token configuration when onboarding new users.

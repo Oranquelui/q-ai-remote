@@ -1,0 +1,231 @@
+{
+  "$defs": {
+    "PlanOp": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content"
+        },
+        "op_id": {
+          "pattern": "^op_[A-Za-z0-9_-]{1,32}$",
+          "title": "Op Id",
+          "type": "string"
+        },
+        "patch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Patch"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "list_dir",
+            "read_file",
+            "create_file",
+            "patch_file"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op_id",
+        "type",
+        "path"
+      ],
+      "title": "PlanOp",
+      "type": "object"
+    },
+    "PlanStatus": {
+      "enum": [
+        "PENDING_APPROVAL",
+        "APPROVED",
+        "REJECTED",
+        "EXECUTED",
+        "FAILED"
+      ],
+      "title": "PlanStatus",
+      "type": "string"
+    },
+    "PolicySnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_path_prefixes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Path Prefixes",
+          "type": "array"
+        },
+        "network_ops": {
+          "default": false,
+          "title": "Network Ops",
+          "type": "boolean"
+        },
+        "policy_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "shell_exec": {
+          "default": false,
+          "title": "Shell Exec",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "policy_id",
+        "allowed_path_prefixes"
+      ],
+      "title": "PolicySnapshot",
+      "type": "object"
+    },
+    "RequestedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "chat_id": {
+          "minimum": 1,
+          "title": "Chat Id",
+          "type": "integer"
+        },
+        "telegram_user_id": {
+          "minimum": 1,
+          "title": "Telegram User Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "telegram_user_id",
+        "chat_id"
+      ],
+      "title": "RequestedBy",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "RiskReport": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked": {
+          "title": "Blocked",
+          "type": "boolean"
+        },
+        "level": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "score": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Score",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "score",
+        "level",
+        "blocked"
+      ],
+      "title": "RiskReport",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "ops": {
+      "items": {
+        "$ref": "#/$defs/PlanOp"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Ops",
+      "type": "array"
+    },
+    "plan_id": {
+      "pattern": "^pln_[A-Za-z0-9_-]{6,64}$",
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "policy_snapshot": {
+      "$ref": "#/$defs/PolicySnapshot"
+    },
+    "request_text": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Request Text",
+      "type": "string"
+    },
+    "requested_by": {
+      "$ref": "#/$defs/RequestedBy"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskReport"
+    },
+    "short_token": {
+      "pattern": "^[A-Za-z0-9]{6,12}$",
+      "title": "Short Token",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/PlanStatus",
+      "default": "PENDING_APPROVAL"
+    }
+  },
+  "required": [
+    "plan_id",
+    "short_token",
+    "requested_by",
+    "request_text",
+    "expires_at",
+    "policy_snapshot",
+    "ops",
+    "risk"
+  ],
+  "title": "Plan",
+  "type": "object"
+}

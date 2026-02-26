@@ -1,0 +1,90 @@
+version: pol_v1
+workspace_root: .
+instance:
+  id: default
+ui:
+  language: ja
+engine:
+  mode: claude_subscription
+  timeout_seconds: 120
+  codex_api_model: gpt-5-codex
+  codex_cli:
+    command: codex
+    model: gpt-5.3-codex
+  claude_cli:
+    command: claude
+    model: sonnet
+telegram:
+  commands:
+  - /start
+  - /policy
+  - /plan
+  - /approve
+  - /reject
+  - /status
+  - /logs
+  response:
+    include_file_body: false
+    include_diff_summary: true
+users:
+  allowlist_user_ids:
+  - 1476109904
+  fail_closed_when_empty: true
+rate_limit:
+  command_per_minute: 20
+  plan_per_minute: 5
+  approve_per_minute: 2
+plan:
+  require_workspace_relative_paths: true
+  reject_absolute_paths: true
+  reject_unc_paths: true
+  reject_parent_traversal: true
+  reject_symlink: true
+  reject_junction: true
+  short_token:
+    enabled: true
+    length: 8
+  ttl_minutes: 30
+executor:
+  allowed_ops:
+  - list_dir
+  - read_file
+  - create_file
+  - patch_file
+  prohibit:
+  - arbitrary_command_execution
+  - network_operation
+  - delete
+  - move
+  - chmod
+allowed_path_prefixes:
+- docs/
+- src/
+- config/
+- db/
+- schemas/
+- scripts/
+- tests/
+- audit/
+blocked_path_patterns:
+- .git/
+- .env
+- .ssh/
+- '**/*.key'
+risk:
+  block_levels:
+  - HIGH
+  - CRITICAL
+  scoring:
+    list_dir: 1
+    read_file: 2
+    create_file: 10
+    patch_file: 14
+    per_20_changed_lines: 1
+    per_extra_file: 3
+storage:
+  sqlite: data/qguard.sqlite3
+  plans_dir: data/plans
+  audit_jsonl_dir: data/audit/jsonl
+  audit_diff_dir: data/audit/diffs
+  audit_html_dir: data/audit/reports

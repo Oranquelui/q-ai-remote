@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Runtime artifacts
+data/*
+!data/.gitkeep
+
+# Local setup/runtime state
+config/.active_instance
+config/policy.yaml.bak.*
+config/instances/*/
+!config/instances/.gitkeep
+
+# Logs
+*.log
+
+# Local reference assets (not for this repo)
+参考/
