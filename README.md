@@ -20,6 +20,17 @@ python scripts/export_distribution.py --force
 出力先（既定）:
 - `dist/q-ai-remote-distribution`
 
+### 配布Repoへ自動リリース（export + push）
+1コマンドで、配布パッケージ生成から `dist` remote への push まで実行します。
+
+```bash
+./.venv/bin/python scripts/release_distribution.py
+```
+
+オプション例:
+- pushせず確認だけ: `./.venv/bin/python scripts/release_distribution.py --dry-run`
+- dirty作業ツリーでも実行: `./.venv/bin/python scripts/release_distribution.py --allow-dirty`
+
 ## できること
 - Telegramで自由質問（チャット回答）
 - `/task` でファイル/コード変更の Plan+Risk 作成
