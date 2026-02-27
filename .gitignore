@@ -14,9 +14,13 @@ data/*
 
 # Local setup/runtime state
 config/.active_instance
+config/bots.yaml
 config/policy.yaml.bak.*
 config/instances/*/
 !config/instances/.gitkeep
+
+# Distribution export output
+dist/
 
 # Logs
 *.log

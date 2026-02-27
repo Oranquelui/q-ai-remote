@@ -1,5 +1,6 @@
 # Q AI Remote
 
+旧称: Q CodeAnzenn。
 Telegramで操作する、安全ガバナンス型のローカル作業アシスタントです。
 
 ## 配布方針 (日本語優先)
