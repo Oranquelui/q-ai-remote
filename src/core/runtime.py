@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.adapters.chat_factory import create_chat_client
 from src.adapters.planner_factory import create_planner_client
 from src.audit.audit_logger import AuditLogger
 from src.audit.report_builder import ReportArtifact, ReportBuilder
@@ -71,6 +73,7 @@ class AppRuntime:
         secrets = load_runtime_secrets(
             service_name=secret_service_name,
             require_codex_api_key=(engine_mode == "codex_api"),
+            require_claude_api_key=(engine_mode == "claude_api"),
         )
         self.telegram_bot_token = secrets.telegram_bot_token
 
@@ -78,6 +81,13 @@ class AppRuntime:
             policy=self.policy,
             workspace_root=self.workspace_root,
             codex_api_key=secrets.codex_api_key,
+            claude_api_key=secrets.claude_api_key,
+        )
+        self.chat_client = create_chat_client(
+            policy=self.policy,
+            workspace_root=self.workspace_root,
+            codex_api_key=secrets.codex_api_key,
+            claude_api_key=secrets.claude_api_key,
         )
         self.planner = PlannerService(
             workspace_root=self.workspace_root,
@@ -151,7 +161,33 @@ class AppRuntime:
             payload={"approved_by": user_id},
         )
 
-        result = self.executor.execute_approved_plan(plan)
+        exec_started = time.perf_counter()
+        try:
+            result = self.executor.execute_approved_plan(plan)
+        except RuntimeError as exc:
+            duration_ms = int((time.perf_counter() - exec_started) * 1000)
+            self.audit.append(
+                plan_id=plan.plan_id,
+                event_type="EXECUTION_FAILED",
+                status="FAILED",
+                payload={"error": str(exc)},
+            )
+            jsonl_path = self.audit.jsonl_path_for(plan.plan_id)
+            chain_head = self.audit.last_hash_for(plan.plan_id)
+            self.store.insert_audit_summary(
+                plan_id=plan.plan_id,
+                final_status="FAILED",
+                risk_score=plan.risk.score,
+                risk_level=plan.risk.level.value,
+                op_count=len(plan.ops),
+                write_op_count=0,
+                diff_path=None,
+                html_report_path=None,
+                jsonl_path=str(jsonl_path),
+                chain_head_hash=chain_head,
+                duration_ms=duration_ms,
+            )
+            raise
 
         for op in result.op_summaries:
             self.audit.append(
@@ -206,7 +242,23 @@ class AppRuntime:
 
         row = self.store.get_audit_summary(plan_id)
         if row is None:
-            raise ApprovalError("audit summary not found")
+            plan_row = self.store.get_plan(plan_id)
+            if plan_row is None:
+                raise ApprovalError("plan not found")
+            if plan_row.status not in {"FAILED", "EXECUTED"}:
+                raise ApprovalError("audit summary not found")
+
+            jsonl_path = self.audit.jsonl_path_for(plan_id)
+            if not jsonl_path.exists():
+                raise ApprovalError("audit summary not found")
+
+            return LogsView(
+                plan_id=plan_id,
+                final_status=plan_row.status,
+                diff_path="(no diff artifact)",
+                html_report_path="(not generated)",
+                jsonl_path=str(jsonl_path),
+            )
 
         diff_path = row["diff_path"] or "(no write ops)"
         html_report_path = row["html_report_path"] or "(not generated)"
@@ -264,6 +316,16 @@ class AppRuntime:
                 )
             )
         return out
+
+    def answer_chat(self, user_id: int, user_text: str) -> str:
+        self._enforce_allowlist(user_id)
+        self._check_rate(user_id, "command")
+        answer = self.chat_client.answer(user_text=user_text)
+        text = (answer or "").strip()
+        if not text:
+            raise RuntimeError("chat answer is empty")
+        # Telegram single-message practical upper bound handling.
+        return text[:3500]
 
     def export_plan_json(self, plan_id: str) -> str:
         plan = self.approval.get_plan(plan_id)

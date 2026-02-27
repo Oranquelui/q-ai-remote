@@ -1,67 +1,107 @@
-# Q CodeAnzenn MVP
+# Q AI Remote
 
-Telegram-operated safety governance assistant.
+旧称: Q CodeAnzenn。  
+Telegramで操作する、安全ガバナンス型のローカル作業アシスタントです。
 
-## Quick Desktop Setup
-Use one of these local setup entrypoints after download:
+## 配布方針 (日本語優先)
+- 配布は GitHub `Public` を推奨
+- ライセンスは `MIT`（このリポジトリに `LICENSE` を同梱）
+- 初心者向け手順: [docs/manual_beginner_ja.md](docs/manual_beginner_ja.md)
+- 紹介文テンプレ: [docs/intro_copy_ja.md](docs/intro_copy_ja.md)
+- 脆弱性報告ポリシー: [SECURITY.md](SECURITY.md)
 
-- macOS (double click):
-  - `scripts/setup_macos.command`
-  - startup prompt lets user choose `日本語` or `English`
-  - after setup, bot starts automatically in the same window
-  - if same-folder bot is already running, setup auto-restarts it
-- Windows (PowerShell):
+### 配布用パッケージを自動生成
+開発用の `tests/.taskmaster/data` などを除外し、配布に必要なファイルだけを出力します。
+
+```bash
+python scripts/export_distribution.py --force
+```
+
+出力先（既定）:
+- `dist/q-ai-remote-distribution`
+
+## できること
+- Telegramで自由質問（チャット回答）
+- `/task` でファイル/コード変更の Plan+Risk 作成
+- 承認後のみ実行
+- 実行後に `diff + JSONL + HTML` をローカル保存
+
+## クイックセットアップ
+ダウンロード後、どちらかを実行します。
+
+- macOS:
+  - `scripts/setup_macos.command` をダブルクリック
+- Windows:
   - `powershell -ExecutionPolicy Bypass -File scripts\\setup_windows.ps1`
 
-What the setup wizard does:
-- Asks Telegram bot token first (to prevent wrong-bot testing confusion)
-- Optionally auto-detects Telegram `user_id` from `/start` via Bot API `getUpdates`
-- Selects `engine.mode` in `config/policy.yaml`
-- Sets `users.allowlist_user_ids`
-- Sets `instance_id` (default: `default`) for multi-bot isolation
-- Stores `telegram_bot_token` in OS credential store (`qcodeanzenn.<instance_id>`)
-- If `codex_api` mode, also stores `codex_api_key`
-- Checks subscription login state (`codex login status` / `claude auth status`)
-- Saves UI language (`ui.language`) and reflects it in Telegram in-chat menu labels
+セットアップ完了時:
+- 言語を `日本語/English` で選択
+- 同一ウィンドウで Bot を自動起動
+- 同じ instance が起動中なら自動再起動
 
-Optional:
-- `QCA_SETUP_AUTOSTART=N` to skip auto-start after setup
+## セットアップウィザードが行うこと
+- Telegram Bot token を最初に確認
+- 必要なら `/start` から `user_id` を自動取得（Bot API `getUpdates`）
+- `engine.mode` を設定
+- `users.allowlist_user_ids` を設定
+- `instance_id` を設定（既定: `default`）
+- OS資格情報ストアに秘密情報を保存
+  - `telegram_bot_token`（必須）
+  - `codex_api_key`（`codex_api` のとき必須）
+  - `claude_api_key`（`claude_api` のとき必須）
+- サブスクモード時にCLIログイン状態を確認
+  - `codex login status`
+  - `claude auth status`
+- `ui.language` を保存し、Telegramメニュー文言に反映
 
-## Run
-1. Install dependencies:
+オプション:
+- `QCA_SETUP_AUTOSTART=N` で自動起動をスキップ
+- `QCA_SETUP_AUTOSTART_SCOPE=all` で全instance再起動
+
+## 実行方法
+1. 依存をインストール
    - `pip install -r requirements.txt`
-2. Choose planner engine in `config/policy.yaml` (`engine.mode`):
+2. `config/policy.yaml` の `engine.mode` を選択
+   - `codex_subscription`
+   - `claude_subscription`
    - `codex_api`
-   - `codex_subscription` (Codex CLI login session)
-   - `claude_subscription` (Claude CLI auth session)
-3. Set OS credential store entries under service:
-   - `qcodeanzenn` for `instance_id=default`
-   - `qcodeanzenn.<instance_id>` for non-default instances
-   - Always required: `telegram_bot_token`
-   - Required only for `engine.mode=codex_api`: `codex_api_key`
-4. For subscription modes, ensure CLI auth is completed in the same OS account:
-   - `codex login` (for `codex_subscription`)
-   - `claude auth` (for `claude_subscription`)
-5. Update allowlist in `config/policy.yaml` (`users.allowlist_user_ids`).
-6. Start:
-   - Default instance: `python -m src.main`
-   - Named instance: `python -m src.main --instance-id mybot2`
+   - `claude_api`
+3. allowlist を設定
+   - `users.allowlist_user_ids`
+4. 起動
+   - 単体: `python -m src.main --instance-id mybot2`
+   - 複数: `python scripts/bot_manager.py start --all`
 
-## Multi-Bot Quick Flow (macOS/Windows)
-1. Run setup once per bot token and choose a different `instance_id` each time.
-2. Each instance stores secrets separately:
-   - `qcodeanzenn` (default)
-   - `qcodeanzenn.<instance_id>` (non-default)
-3. Start one process per instance:
-   - `python -m src.main --instance-id default`
-   - `python -m src.main --instance-id mybot2`
+## Telegramの基本操作
+- `/start`: 起動メッセージ
+- `/policy`: 現在ポリシー表示
+- `/plan <依頼>`: Plan+Risk作成（実行なし）
+- `/task <依頼>`: Plan+Risk作成（実行なし）
+- `/approve <plan_id> <short_token>`: 承認して実行
+- `/reject <plan_id>`: 破棄
+- `/status [plan_id]`: 状態確認
+- `/logs <plan_id>`: 監査ログ確認
 
-## Security Guarantees (MVP)
-- No execution before `/approve <plan_id> <short_token>`
-- Fixed safe ops only: `list_dir/read_file/create_file/patch_file`
-- Outside-allowed path access rejected
-- JSONL hash-chain + HTML report persisted for executed plans
+## セキュリティ保証 (MVP)
+- `/approve` されるまで実行しない
+- 実行可能操作は固定4種のみ
+  - `list_dir/read_file/create_file/patch_file`
+- Allowed Paths 外アクセスは拒否
+- 任意コマンド実行・ネットワーク実行を禁止
+- 監査証跡を保存（JSONL hash-chain / HTML / diff）
 
-## Engine Notes
-- Subscription mode still keeps execution safety gates unchanged.
-- Planner generation is engine-switched only; executor behavior remains fixed and policy-guarded.
+## マルチボット運用
+- Botごとに `instance_id` を分けてセットアップ
+- 秘密情報は `qcodeanzenn.<instance_id>` に分離保存
+- 一括起動/停止:
+  - `python scripts/bot_manager.py start --all`
+  - `python scripts/bot_manager.py status --all`
+  - `python scripts/bot_manager.py stop --all`
+
+## English (Sub)
+- Q AI Remote is a Telegram-operated, safety-governed local execution assistant.
+- Use `/task` to generate Plan+Risk, then approve to execute.
+- Execution is restricted to fixed safe ops and audited with diff/JSONL/HTML.
+- Desktop setup scripts:
+  - macOS: `scripts/setup_macos.command`
+  - Windows: `scripts/setup_windows.ps1`

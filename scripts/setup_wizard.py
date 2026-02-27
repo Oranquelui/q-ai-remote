@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Desktop first-run setup for Q CodeAnzenn.
+"""Desktop first-run setup for Q AI Remote.
 
 Purpose:
 - Select engine mode in config/policy.yaml
@@ -30,26 +30,30 @@ import yaml
 BASE_SERVICE_NAME = "qcodeanzenn"
 POLICY_PATH = Path("config/policy.yaml")
 INSTANCE_POLICY_DIR = Path("config/instances")
+BOTS_REGISTRY_PATH = Path("config/bots.yaml")
 ACTIVE_INSTANCE_FILE = Path("config/.active_instance")
 DEFAULT_INSTANCE_ID = "default"
-ALLOWED_MODES = ["codex_subscription", "claude_subscription", "codex_api"]
+ALLOWED_MODES = ["codex_subscription", "claude_subscription", "codex_api", "claude_api"]
 LANG_CHOICES = ("ja", "en")
+AUTO_USER_ID_WAIT_SECONDS = 120
 MODE_LABELS = {
     "ja": {
         "codex_subscription": "Codexサブスク (codex login)",
         "claude_subscription": "Claudeサブスク (claude auth)",
         "codex_api": "Codex APIキー モード",
+        "claude_api": "Claude APIキー モード",
     },
     "en": {
         "codex_subscription": "Codex subscription (codex login)",
         "claude_subscription": "Claude subscription (claude auth)",
         "codex_api": "Codex API key mode",
+        "claude_api": "Claude API key mode",
     },
 }
 
 TEXTS = {
     "ja": {
-        "wizard_title": "Q CodeAnzenn セットアップ",
+        "wizard_title": "Q AI Remote セットアップ",
         "repo": "- リポジトリ: {repo}",
         "policy": "- ポリシー: {policy}",
         "instance_id": "- インスタンス: {instance_id}",
@@ -66,7 +70,7 @@ TEXTS = {
         "instance_new_policy_seeded": "- 新規インスタンス用 policy を作成しました: {path}",
         "select_mode_header": "\nEngine mode を選択してください:",
         "mode_prompt": "Mode [{current}]: ",
-        "mode_invalid": "不正な入力です。1-3 か mode 名を入力してください。",
+        "mode_invalid": "不正な入力です。1-4 か mode 名を入力してください。",
         "user_id_prompt": "allowlist に入れる Telegram user id [{default}]: ",
         "auto_user_id_prompt": "allowlist 用 user id を自動取得しますか？",
         "auto_user_id_wait": "  Telegramで @{username} に /start を送ってください（最大{seconds}秒待機）",
@@ -90,7 +94,7 @@ TEXTS = {
         "secret_required": "{account} は必須です。値を入力してください。",
         "secret_skipped": "- {account} の入力をスキップしました",
         "secrets_header": "\nSecrets 設定:",
-        "api_key_optional": "- サブスク mode では codex_api_key は任意です",
+        "api_key_optional": "- サブスク mode では codex_api_key / claude_api_key は任意です",
         "prereq_header": "\nEngine 事前チェック:",
         "codex_ok": "- codex login status: OK",
         "codex_ng": "- codex login status: 未完了",
@@ -104,7 +108,8 @@ TEXTS = {
         "login_done_recheck": "  ログイン完了。再確認します。",
         "login_failed": "  ログイン実行に失敗しました (code={code})",
         "manual_check_hint": "  手動確認: {command}",
-        "api_note": "- codex_api mode を選択中（codex_api_key が必要）",
+        "api_note_codex": "- codex_api mode を選択中（codex_api_key が必要）",
+        "api_note_claude": "- claude_api mode を選択中（claude_api_key が必要）",
         "policy_updated": "\nPolicy を更新しました:",
         "updated_mode": "- mode: {mode}",
         "updated_allowlist": "- allowlist_user_ids: {allowlist}",
@@ -112,16 +117,19 @@ TEXTS = {
         "updated_instance": "- instance.id: {instance_id}",
         "updated_storage_root": "- storage root: {root}",
         "active_instance_written": "- active instance を更新: {path}",
+        "registry_updated": "- bots registry を更新: {path} ({instance_id})",
         "next_header": "\n次の操作:",
         "next_start_1": "1) Bot起動:",
         "next_start_2": "   ./.venv/bin/python -m src.main --instance-id {instance_id}   (macOS/Linux)",
         "next_start_3": "   .\\.venv\\Scripts\\python.exe -m src.main --instance-id {instance_id}   (Windows)",
         "next_flow": "2) Telegram: /start -> /policy -> /plan ... -> /approve ... ... -> /logs ...",
         "next_bot_target": "3) Telegramで開くBot: @{username}",
+        "next_manager_status": "4) Bot一覧/状態: python scripts/bot_manager.py status --all",
+        "next_manager_start_all": "5) 全Bot起動: python scripts/bot_manager.py start --all",
         "non_interactive_requires": "--non-interactive では --mode と --user-id が必須です",
     },
     "en": {
-        "wizard_title": "Q CodeAnzenn setup wizard",
+        "wizard_title": "Q AI Remote setup wizard",
         "repo": "- repo: {repo}",
         "policy": "- policy: {policy}",
         "instance_id": "- instance: {instance_id}",
@@ -138,7 +146,7 @@ TEXTS = {
         "instance_new_policy_seeded": "- Seeded new instance policy: {path}",
         "select_mode_header": "\nSelect engine mode:",
         "mode_prompt": "Mode [{current}]: ",
-        "mode_invalid": "Invalid mode. Choose 1-3 or a mode name.",
+        "mode_invalid": "Invalid mode. Choose 1-4 or a mode name.",
         "user_id_prompt": "Telegram user id for allowlist [{default}]: ",
         "auto_user_id_prompt": "Auto-detect Telegram user id for allowlist now?",
         "auto_user_id_wait": "  Send /start to @{username} in Telegram (waiting up to {seconds}s)",
@@ -162,7 +170,7 @@ TEXTS = {
         "secret_required": "{account} is required. Please enter a value.",
         "secret_skipped": "- Skipped {account}",
         "secrets_header": "\nSecrets setup:",
-        "api_key_optional": "- codex_api_key is optional in subscription mode",
+        "api_key_optional": "- codex_api_key / claude_api_key are optional in subscription modes",
         "prereq_header": "\nEngine prerequisite check:",
         "codex_ok": "- codex login status: OK",
         "codex_ng": "- codex login status: NOT READY",
@@ -176,7 +184,8 @@ TEXTS = {
         "login_done_recheck": "  Login command finished. Re-checking.",
         "login_failed": "  Login command failed (code={code})",
         "manual_check_hint": "  Manual check: {command}",
-        "api_note": "- codex_api mode selected (requires codex_api_key in credential store)",
+        "api_note_codex": "- codex_api mode selected (requires codex_api_key in credential store)",
+        "api_note_claude": "- claude_api mode selected (requires claude_api_key in credential store)",
         "policy_updated": "\nPolicy updated:",
         "updated_mode": "- mode: {mode}",
         "updated_allowlist": "- allowlist_user_ids: {allowlist}",
@@ -184,12 +193,15 @@ TEXTS = {
         "updated_instance": "- instance.id: {instance_id}",
         "updated_storage_root": "- storage root: {root}",
         "active_instance_written": "- updated active instance file: {path}",
+        "registry_updated": "- updated bots registry: {path} ({instance_id})",
         "next_header": "\nNext:",
         "next_start_1": "1) Start bot:",
         "next_start_2": "   ./.venv/bin/python -m src.main --instance-id {instance_id}   (macOS/Linux)",
         "next_start_3": "   .\\.venv\\Scripts\\python.exe -m src.main --instance-id {instance_id}   (Windows)",
         "next_flow": "2) Telegram: /start -> /policy -> /plan ... -> /approve ... ... -> /logs ...",
         "next_bot_target": "3) Open this bot in Telegram: @{username}",
+        "next_manager_status": "4) Bot list/status: python scripts/bot_manager.py status --all",
+        "next_manager_start_all": "5) Start all bots: python scripts/bot_manager.py start --all",
         "non_interactive_requires": "--non-interactive requires --mode and --user-id",
     },
 }
@@ -305,6 +317,56 @@ def _write_active_instance(repo_root: Path, instance_id: str, lang: str) -> None
     print(tr(lang, "active_instance_written", path=path))
 
 
+def _upsert_bot_registry(repo_root: Path, instance_id: str, lang: str) -> Path:
+    path = repo_root / BOTS_REGISTRY_PATH
+    now = datetime.now(timezone.utc).isoformat()
+
+    if path.exists():
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    else:
+        raw = {"version": 1, "bots": []}
+    if not isinstance(raw, dict):
+        raw = {"version": 1, "bots": []}
+
+    bots = raw.get("bots", [])
+    if not isinstance(bots, list):
+        bots = []
+        raw["bots"] = bots
+
+    service_name = _service_name_for_instance(instance_id)
+    policy_path = _instance_policy_path(repo_root=repo_root, instance_id=instance_id)
+    policy_rel = str(policy_path.relative_to(repo_root))
+
+    updated = False
+    for row in bots:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("instance_id", "")) == instance_id:
+            row["enabled"] = True
+            row["service_name"] = service_name
+            row["policy_path"] = policy_rel
+            row["updated_at"] = now
+            updated = True
+            break
+
+    if not updated:
+        bots.append(
+            {
+                "instance_id": instance_id,
+                "enabled": True,
+                "service_name": service_name,
+                "policy_path": policy_rel,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(raw, sort_keys=False, allow_unicode=False), encoding="utf-8")
+    print(tr(lang, "registry_updated", path=path, instance_id=instance_id))
+    return path
+
+
 def _read_active_instance(repo_root: Path) -> Optional[str]:
     path = repo_root / ACTIVE_INSTANCE_FILE
     if not path.exists():
@@ -316,6 +378,13 @@ def _read_active_instance(repo_root: Path) -> Optional[str]:
         return _resolve_instance_id(raw)
     except RuntimeError:
         return None
+
+
+def _has_active_instance_file(repo_root: Path) -> bool:
+    path = repo_root / ACTIVE_INSTANCE_FILE
+    if not path.exists():
+        return False
+    return bool(path.read_text(encoding="utf-8").strip())
 
 
 def load_policy(path: Path, lang: str) -> dict[str, Any]:
@@ -587,7 +656,12 @@ def maybe_auto_detect_user_id(
     username = ""
     if isinstance(telegram_info, dict):
         username = str(telegram_info.get("username") or "")
-    user_id = _auto_detect_user_id_from_token(token=token, lang=lang, username=username, wait_seconds=60)
+    user_id = _auto_detect_user_id_from_token(
+        token=token,
+        lang=lang,
+        username=username,
+        wait_seconds=AUTO_USER_ID_WAIT_SECONDS,
+    )
     if user_id is None:
         print(tr(lang, "auto_user_id_failed"))
         return None
@@ -596,7 +670,7 @@ def maybe_auto_detect_user_id(
     return user_id
 
 
-def configure_codex_api_secret_if_needed(mode: str, service_name: str, lang: str) -> None:
+def configure_api_secrets_if_needed(mode: str, service_name: str, lang: str) -> None:
     if mode == "codex_api":
         key_label = "Codex API key" if lang == "en" else "Codex APIキー"
         _set_secret_if_needed(
@@ -606,8 +680,20 @@ def configure_codex_api_secret_if_needed(mode: str, service_name: str, lang: str
             required=True,
             lang=lang,
         )
-    else:
-        print(tr(lang, "api_key_optional"))
+        return
+
+    if mode == "claude_api":
+        key_label = "Claude API key" if lang == "en" else "Claude APIキー"
+        _set_secret_if_needed(
+            service_name=service_name,
+            account="claude_api_key",
+            prompt_label=key_label,
+            required=True,
+            lang=lang,
+        )
+        return
+
+    print(tr(lang, "api_key_optional"))
 
 
 def _run_status(cmd: list[str]) -> tuple[int, str]:
@@ -691,11 +777,16 @@ def verify_engine_prereq(mode: str, lang: str, allow_prompt_login: bool = True) 
                 print(tr(lang, "login_failed", code=code))
         return
 
-    print(tr(lang, "api_note"))
+    if mode == "codex_api":
+        print(tr(lang, "api_note_codex"))
+    elif mode == "claude_api":
+        print(tr(lang, "api_note_claude"))
+    else:
+        print(tr(lang, "api_key_optional"))
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Q CodeAnzenn desktop setup wizard")
+    parser = argparse.ArgumentParser(description="Q AI Remote desktop setup wizard")
     parser.add_argument(
         "--mode",
         choices=ALLOWED_MODES,
@@ -728,6 +819,7 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     env_instance = os.getenv("QCA_INSTANCE_ID", "")
     active_instance = _read_active_instance(repo_root=repo_root)
+    has_active_instance = _has_active_instance_file(repo_root=repo_root)
     requested_instance = args.instance_id or env_instance or active_instance or DEFAULT_INSTANCE_ID
     try:
         default_instance_id = _resolve_instance_id(requested_instance)
@@ -741,7 +833,7 @@ def main() -> int:
             return 2
         instance_id = default_instance_id
     else:
-        setup_type = choose_setup_type(lang=lang, default_add=bool(active_instance))
+        setup_type = choose_setup_type(lang=lang, default_add=has_active_instance)
         if args.instance_id:
             instance_seed = args.instance_id
         elif setup_type == "first":
@@ -806,9 +898,10 @@ def main() -> int:
     print(tr(lang, "updated_storage_root", root=storage_root))
     print(tr(lang, "updated_backup", backup=backup))
     _write_active_instance(repo_root=repo_root, instance_id=instance_id, lang=lang)
+    _upsert_bot_registry(repo_root=repo_root, instance_id=instance_id, lang=lang)
 
     if not args.skip_secrets:
-        configure_codex_api_secret_if_needed(mode=mode, service_name=service_name, lang=lang)
+        configure_api_secrets_if_needed(mode=mode, service_name=service_name, lang=lang)
 
     verify_engine_prereq(mode, lang=lang, allow_prompt_login=not args.non_interactive)
 
@@ -819,6 +912,8 @@ def main() -> int:
     print(tr(lang, "next_flow"))
     if telegram_info and telegram_info.get("username"):
         print(tr(lang, "next_bot_target", username=telegram_info["username"]))
+    print(tr(lang, "next_manager_status"))
+    print(tr(lang, "next_manager_start_all"))
     return 0
 
 

@@ -6,21 +6,42 @@ from src.core.executor import ExecutionResult
 from src.models.plan import Plan
 
 
+def _status_label(status: str, lang: str = "ja") -> str:
+    s = (status or "").upper()
+    if (lang or "ja").lower() == "en":
+        return {
+            "PENDING_APPROVAL": "Waiting approval",
+            "APPROVED": "Approved",
+            "EXECUTING": "Executing",
+            "EXECUTED": "Completed",
+            "FAILED": "Failed",
+            "REJECTED": "Rejected",
+            "EXPIRED": "Expired",
+        }.get(s, s)
+    return {
+        "PENDING_APPROVAL": "承認待ち",
+        "APPROVED": "承認済み",
+        "EXECUTING": "実行中",
+        "EXECUTED": "完了",
+        "FAILED": "失敗",
+        "REJECTED": "破棄",
+        "EXPIRED": "期限切れ",
+    }.get(s, s)
+
+
 def start_text(lang: str = "ja") -> str:
     if (lang or "ja").lower() == "en":
         return (
-            "Q CodeAnzenn MVP is online.\n"
-            "Mode: Safety Governance\n"
-            "Commands: /start /policy /task /plan /approve /reject /status /logs\n"
-            "Rule: No execution before explicit /approve.\n"
-            "Input guide: send /plan <request>, tap Create Task, or just send free text."
+            "Q AI Remote is ready.\n"
+            "Send plain text for questions.\n"
+            "Use /task for file/code changes.\n"
+            "After plan creation, use the on-screen buttons to run or cancel."
         )
     return (
-        "Q CodeAnzenn MVP が起動中です。\n"
-        "モード: 安全ガバナンス\n"
-        "コマンド: /start /policy /task /plan /approve /reject /status /logs\n"
-        "ルール: /approve されるまで実行しません。\n"
-        "入力ガイド: /task <依頼内容>、新規TASK開始、または自由文入力が使えます。"
+        "Q AI Remote を開始しました。\n"
+        "自由文はそのまま送信できます。\n"
+        "ファイル/コード変更は /task を使います。\n"
+        "Plan作成後は画面ボタンで実行または破棄します。"
     )
 
 
@@ -29,7 +50,8 @@ def policy_text(lang: str = "ja") -> str:
         return (
             "Policy v1\n"
             "- Allowed ops: list_dir, read_file, create_file, patch_file\n"
-            "- Prohibited: arbitrary command execution, network operations, absolute paths/UNC/symlink/junction\n"
+            "- Prohibited (execution ops): arbitrary command execution, network operations, absolute paths/UNC/symlink/junction\n"
+            "- Chat/free-question answers may use live web lookup depending on engine/runtime availability\n"
             "- Planning engine: switch by policy.yaml engine.mode\n"
             "- Write operations always require approval\n"
             "- Approval format: /approve <plan_id> <short_token>\n"
@@ -38,7 +60,8 @@ def policy_text(lang: str = "ja") -> str:
     return (
         "ポリシー v1\n"
         "- 許可操作: list_dir, read_file, create_file, patch_file\n"
-        "- 禁止: 任意コマンド実行、ネットワーク操作、絶対パス/UNC/symlink/junction\n"
+        "- 禁止（実行オペレーション）: 任意コマンド実行、ネットワーク操作、絶対パス/UNC/symlink/junction\n"
+        "- 自由質問の回答は、エンジン/実行環境で可能な場合にライブWeb参照を行うことがあります\n"
         "- 生成エンジン: policy.yaml の engine.mode で切替\n"
         "- 書き込み系は必ず承認が必要\n"
         "- 承認形式: /approve <plan_id> <short_token>\n"
@@ -58,6 +81,12 @@ def planning_in_progress_text(lang: str = "ja") -> str:
         "エンジン応答時間により 20-90秒ほどかかる場合があります。\n"
         "完了メッセージが届くまでお待ちください。"
     )
+
+
+def chat_in_progress_text(lang: str = "ja") -> str:
+    if (lang or "ja").lower() == "en":
+        return "Generating chat answer..."
+    return "回答を生成中です..."
 
 
 def plan_text(plan: Plan) -> str:
@@ -100,7 +129,7 @@ def logs_text(
     return (
         "実行ログ\n"
         f"plan_id: {plan_id}\n"
-        f"status: {final_status}\n"
+        f"status: {_status_label(final_status, 'ja')} ({final_status})\n"
         f"diff_summary: {diff_summary}\n"
         f"jsonl: {jsonl_path}\n"
         f"html: {html_path}"
@@ -114,7 +143,7 @@ def execution_summary_text(result: ExecutionResult) -> str:
     return (
         "実行が完了しました\n"
         f"plan_id: {result.plan_id}\n"
-        f"status: {result.status}\n"
+        f"status: {_status_label(result.status, 'ja')} ({result.status})\n"
         f"ops: {len(result.op_summaries)}\n"
         f"write_ops: {result.write_op_count}\n"
         f"duration_ms: {result.duration_ms}\n"
@@ -125,28 +154,22 @@ def execution_summary_text(result: ExecutionResult) -> str:
 def menu_help_text(lang: str = "ja") -> str:
     if (lang or "ja").lower() == "en":
         return (
-            "Menu actions\n"
-            "- TASK List (20): show your recent plan IDs\n"
-            "- Pending TASKs: show approvable plans with /approve format\n"
-            "- Start New TASK: next single message is processed as /task\n"
-            "- TASK Guide: usage and approval flow\n"
-            "- Safety Policy: show current safety policy\n"
-            "- Engine/Runtime: /status (runtime) or /status <plan_id>\n"
-            "- Audit Logs: /logs <plan_id>\n"
-            "- Free text is also accepted and routed to /task automatically\n"
-            "- Direct commands are also available: /start /policy /task /plan /approve /reject /status /logs"
+            "How to use\n"
+            "Ask Freely: send any question.\n"
+            "New TASK: send one request to create Plan+Risk.\n"
+            "Pending TASKs: execute/reject from buttons.\n"
+            "TASK History: check recent plan IDs.\n"
+            "Run Logs: open latest executed task log.\n"
+            "Optional commands: /task /status /logs"
         )
     return (
-        "メニュー操作\n"
-        "- TASK一覧(直近20): あなたの最近のplan_idを表示\n"
-        "- 承認待ちTASK: /approve 可能な計画を表示\n"
-        "- 新規TASK開始: 次の1メッセージを /task として処理\n"
-        "- TASKの進め方: 操作手順と承認フローを表示\n"
-        "- 安全ポリシー: 現在の安全ポリシーを表示\n"
-        "- 接続/稼働状態: /status（稼働状態）または /status <plan_id>\n"
-        "- 監査ログ: /logs <plan_id>\n"
-        "- 自由文も受け付け、/task として自動処理します\n"
-        "- 直接コマンドも利用可能: /start /policy /task /plan /approve /reject /status /logs"
+        "使い方\n"
+        "自由質問: そのまま質問を送信\n"
+        "新規TASK: 1メッセージ送信で Plan+Risk 作成\n"
+        "承認待ち: ボタンで実行/破棄\n"
+        "TASK履歴: 最近の plan_id を確認\n"
+        "実行ログ: 最新の実行済みログを表示\n"
+        "必要ならコマンド: /task /status /logs"
     )
 
 
@@ -173,18 +196,6 @@ def runtime_status_text(
     )
 
 
-def free_text_routed_text(lang: str = "ja") -> str:
-    if (lang or "ja").lower() == "en":
-        return (
-            "Free text received.\n"
-            "Routing it to /task flow (Plan+Risk only, no execution)."
-        )
-    return (
-        "自由文を受け付けました。\n"
-        "/task フロー（Plan+Riskのみ、実行なし）として処理します。"
-    )
-
-
 def task_list_text(items: list[dict[str, str]], lang: str = "ja") -> str:
     if not items:
         if (lang or "ja").lower() == "en":
@@ -194,15 +205,19 @@ def task_list_text(items: list[dict[str, str]], lang: str = "ja") -> str:
     lines: list[str] = []
     if (lang or "ja").lower() == "en":
         lines.append("TASK List (latest)")
+        latest = items[0]
+        lines.append(f"Latest: {_status_label(latest['status'], 'en')} ({latest['status']})")
         for item in items:
             lines.append(
-                f"- {item['plan_id']} | {item['status']} | {item['risk_level']}({item['risk_score']}) | /status {item['plan_id']}"
+                f"- {item['plan_id']} | {_status_label(item['status'], 'en')} ({item['status']}) | {item['risk_level']}({item['risk_score']}) | /status {item['plan_id']}"
             )
     else:
         lines.append("TASK一覧（直近）")
+        latest = items[0]
+        lines.append(f"最新結果: {_status_label(latest['status'], 'ja')} ({latest['status']})")
         for item in items:
             lines.append(
-                f"- {item['plan_id']} | {item['status']} | {item['risk_level']}({item['risk_score']}) | /status {item['plan_id']}"
+                f"- {item['plan_id']} | {_status_label(item['status'], 'ja')} ({item['status']}) | {item['risk_level']}({item['risk_score']}) | /status {item['plan_id']}"
             )
     return "\n".join(lines)
 
@@ -222,6 +237,7 @@ def pending_task_text(items: list[dict[str, str]], lang: str = "ja") -> str:
             )
             lines.append(f"  /approve {item['plan_id']} {item['short_token']}")
             lines.append(f"  /reject {item['plan_id']}")
+        lines.append("Tip: You can execute/reject from the action buttons.")
     else:
         lines.append("承認待ちTASK")
         for item in items:
@@ -230,4 +246,5 @@ def pending_task_text(items: list[dict[str, str]], lang: str = "ja") -> str:
             )
             lines.append(f"  /approve {item['plan_id']} {item['short_token']}")
             lines.append(f"  /reject {item['plan_id']}")
+        lines.append("補足: 下のアクションボタンから実行/破棄できます。")
     return "\n".join(lines)

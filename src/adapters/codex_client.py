@@ -40,7 +40,8 @@ class CodexClient:
             + ", ".join(allowed_ops)
             + ". Paths must be workspace-relative and must stay under allowed prefixes: "
             + ", ".join(allowed_prefixes)
-            + ". Never use absolute paths, UNC paths, parent traversal, shell commands, or network actions."
+            + ". Never use absolute paths, UNC paths, parent traversal, shell commands, or network actions. "
+            "Use create_file only for clearly new paths. If a file may already exist, prefer patch_file."
         )
 
         user_prompt = (

@@ -63,6 +63,7 @@ class EngineConfig:
     mode: str
     timeout_seconds: int
     codex_api_model: str
+    claude_api_model: str
     codex_cli: EngineCliConfig
     claude_cli: EngineCliConfig
 
@@ -129,7 +130,7 @@ def load_policy(path: Path) -> PolicyConfig:
         raise PolicyLoadError("instance must be an object")
 
     mode = str(engine_raw.get("mode", "codex_api")).strip()
-    if mode not in {"codex_api", "codex_subscription", "claude_subscription"}:
+    if mode not in {"codex_api", "claude_api", "codex_subscription", "claude_subscription"}:
         raise PolicyLoadError(f"invalid engine.mode: {mode}")
 
     timeout_seconds = int(engine_raw.get("timeout_seconds", 120))
@@ -139,6 +140,10 @@ def load_policy(path: Path) -> PolicyConfig:
     codex_api_model = str(engine_raw.get("codex_api_model", "gpt-5-codex")).strip()
     if not codex_api_model:
         raise PolicyLoadError("engine.codex_api_model must not be empty")
+
+    claude_api_model = str(engine_raw.get("claude_api_model", "claude-3-7-sonnet-latest")).strip()
+    if not claude_api_model:
+        raise PolicyLoadError("engine.claude_api_model must not be empty")
 
     codex_cli_raw = engine_raw.get("codex_cli", {})
     claude_cli_raw = engine_raw.get("claude_cli", {})
@@ -208,6 +213,7 @@ def load_policy(path: Path) -> PolicyConfig:
             mode=mode,
             timeout_seconds=timeout_seconds,
             codex_api_model=codex_api_model,
+            claude_api_model=claude_api_model,
             codex_cli=EngineCliConfig(
                 command=codex_command,
                 model=str(codex_cli_raw.get("model", "gpt-5.3-codex")).strip() or "gpt-5.3-codex",

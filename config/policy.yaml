@@ -8,6 +8,7 @@ engine:
   mode: claude_subscription
   timeout_seconds: 120
   codex_api_model: gpt-5-codex
+  claude_api_model: claude-3-7-sonnet-latest
   codex_cli:
     command: codex
     model: gpt-5.3-codex
@@ -27,8 +28,7 @@ telegram:
     include_file_body: false
     include_diff_summary: true
 users:
-  allowlist_user_ids:
-  - 1476109904
+  allowlist_user_ids: []
   fail_closed_when_empty: true
 rate_limit:
   command_per_minute: 20

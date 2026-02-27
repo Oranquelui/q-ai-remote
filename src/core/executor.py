@@ -74,8 +74,19 @@ class Executor:
                 abs_path = safe.abs_path
 
                 if op.type == "list_dir":
-                    if not abs_path.exists() or not abs_path.is_dir():
-                        raise ExecutionError(f"list_dir target not found: {op.path}")
+                    if not abs_path.exists():
+                        op_summaries.append(
+                            OpExecutionSummary(
+                                op_id=op.op_id,
+                                op_type=op.type,
+                                path=op.path,
+                                status="SKIPPED",
+                                summary="target_missing",
+                            )
+                        )
+                        continue
+                    if not abs_path.is_dir():
+                        raise ExecutionError(f"list_dir target is not directory: {op.path}")
                     names = sorted([p.name for p in abs_path.iterdir()])
                     preview = ", ".join(names[:10])
                     op_summaries.append(

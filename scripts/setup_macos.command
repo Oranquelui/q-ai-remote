@@ -74,41 +74,69 @@ if [[ $RC -eq 0 ]]; then
       read -r -p "Enterで閉じます..."
       exit 0
     fi
-    echo "[INFO] Botを自動起動します... (instance_id=$INSTANCE_ID)"
+    echo "[INFO] Botを自動起動します..."
   else
     echo "[OK] setup completed"
     if [[ "$START_NOW" == "N" ]]; then
       read -r -p "Press Enter to close..."
       exit 0
     fi
-    echo "[INFO] Starting bot automatically... (instance_id=$INSTANCE_ID)"
+    echo "[INFO] Starting bot automatically..."
   fi
 
-  RUN_PATTERN="src.main --instance-id $INSTANCE_ID"
-  EXISTING_PIDS="$(pgrep -f "$RUN_PATTERN" || true)"
-  if [[ -n "$EXISTING_PIDS" ]]; then
+  AUTOSTART_SCOPE="${QCA_SETUP_AUTOSTART_SCOPE:-active}"
+  case "$AUTOSTART_SCOPE" in
+    all|ALL|All)
+      TARGET_SCOPE="all"
+      ;;
+    *)
+      TARGET_SCOPE="active"
+      ;;
+  esac
+
+  if [[ "$TARGET_SCOPE" == "all" ]]; then
     if [[ "$LANG_CODE" == "ja" ]]; then
-      echo "[INFO] 同じinstance_idのBotプロセスを停止して再起動します..."
+      echo "[INFO] 登録済みBotをすべて再起動します (scope=all)"
     else
-      echo "[INFO] Stopping existing bot process for same instance_id before restart..."
+      echo "[INFO] Restarting all registered bots (scope=all)"
     fi
-    while IFS= read -r pid; do
-      [[ -n "$pid" ]] || continue
-      kill "$pid" >/dev/null 2>&1 || true
-    done <<< "$EXISTING_PIDS"
-    sleep 1
+    set +e
+    "$PYTHON_BIN" "$ROOT_DIR/scripts/bot_manager.py" start --all --restart --python-bin "$PYTHON_BIN"
+    BOT_RC=$?
+    set -e
+  else
+    if [[ "$LANG_CODE" == "ja" ]]; then
+      echo "[INFO] 対象インスタンスを再起動します (instance_id=$INSTANCE_ID)"
+    else
+      echo "[INFO] Restarting target instance (instance_id=$INSTANCE_ID)"
+    fi
+    set +e
+    "$PYTHON_BIN" "$ROOT_DIR/scripts/bot_manager.py" restart --instance-id "$INSTANCE_ID" --python-bin "$PYTHON_BIN"
+    BOT_RC=$?
+    set -e
   fi
 
-  set +e
-  "$PYTHON_BIN" -m src.main --instance-id "$INSTANCE_ID"
-  BOT_RC=$?
-  set -e
   echo
+  if [[ $BOT_RC -eq 0 ]]; then
+    if [[ "$LANG_CODE" == "ja" ]]; then
+      echo "[OK] Botマネージャ起動完了"
+      echo "[INFO] 状態確認: $PYTHON_BIN $ROOT_DIR/scripts/bot_manager.py status --all"
+      echo "[INFO] ログ確認: tail -f $ROOT_DIR/data/runtime/bots/$INSTANCE_ID/stdout.log"
+      read -r -p "Enterで閉じます..."
+    else
+      echo "[OK] bot manager started successfully"
+      echo "[INFO] status: $PYTHON_BIN $ROOT_DIR/scripts/bot_manager.py status --all"
+      echo "[INFO] logs: tail -f $ROOT_DIR/data/runtime/bots/$INSTANCE_ID/stdout.log"
+      read -r -p "Press Enter to close..."
+    fi
+    exit 0
+  fi
+
   if [[ "$LANG_CODE" == "ja" ]]; then
-    echo "[INFO] Botが終了しました (code=$BOT_RC)"
+    echo "[ERROR] Botマネージャ起動失敗 (code=$BOT_RC)"
     read -r -p "Enterで閉じます..."
   else
-    echo "[INFO] Bot stopped (code=$BOT_RC)"
+    echo "[ERROR] bot manager start failed (code=$BOT_RC)"
     read -r -p "Press Enter to close..."
   fi
   exit $BOT_RC

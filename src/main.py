@@ -1,4 +1,4 @@
-"""Q CodeAnzenn Telegram bot entrypoint."""
+"""Q AI Remote Telegram bot entrypoint."""
 
 from __future__ import annotations
 
@@ -9,11 +9,13 @@ from pathlib import Path
 import re
 
 from telegram import BotCommand, MenuButtonCommands
-from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from src.bot.handlers import TelegramHandlers
 from src.bot.menu import resolve_lang
+from src.config.policy import PolicyLoadError
 from src.core.runtime import AppRuntime
+from src.secrets.base import SecretStoreError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,22 +49,16 @@ def _default_secret_service_name(instance_id: str) -> str:
 def _commands_for_lang(lang: str) -> list[BotCommand]:
     if lang == "en":
         return [
-            BotCommand("start", "Show bot status"),
-            BotCommand("policy", "Show safety policy"),
+            BotCommand("start", "Open quick guide"),
             BotCommand("task", "Create TASK from request"),
             BotCommand("plan", "Alias of /task"),
-            BotCommand("approve", "Approve TASK and execute"),
-            BotCommand("reject", "Reject TASK"),
             BotCommand("status", "Engine/runtime or TASK status"),
             BotCommand("logs", "Show TASK audit logs"),
         ]
     return [
-        BotCommand("start", "起動状態を表示"),
-        BotCommand("policy", "安全ポリシーを表示"),
+        BotCommand("start", "クイックガイドを表示"),
         BotCommand("task", "依頼からTASKを作成"),
         BotCommand("plan", "/task の別名"),
-        BotCommand("approve", "TASKを承認して実行"),
-        BotCommand("reject", "TASKを拒否"),
         BotCommand("status", "接続/稼働またはTASK状態"),
         BotCommand("logs", "TASK監査ログを表示"),
     ]
@@ -80,8 +76,8 @@ def _build_post_init(lang: str):
     return _post_init
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Q CodeAnzenn Telegram runner")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Q AI Remote Telegram runner")
     parser.add_argument(
         "--instance-id",
         help="Instance id for multi-bot isolation (default: default)",
@@ -107,11 +103,33 @@ def main() -> None:
         secret_service_name,
     )
 
-    runtime = AppRuntime(
-        workspace_root=workspace_root,
-        policy_path=policy_path,
-        secret_service_name=secret_service_name,
-    )
+    try:
+        runtime = AppRuntime(
+            workspace_root=workspace_root,
+            policy_path=policy_path,
+            secret_service_name=secret_service_name,
+        )
+    except SecretStoreError as exc:
+        logging.error("startup blocked by missing secret: %s", exc)
+        print(
+            "Startup failed: required secret is missing in OS credential store.\n"
+            f"- instance_id: {instance_id}\n"
+            f"- secret_service: {secret_service_name}\n"
+            f"- detail: {exc}\n"
+            "Run setup script first:\n"
+            "- macOS: scripts/setup_macos.command\n"
+            "- Windows: scripts/setup_windows.ps1"
+        )
+        return 2
+    except PolicyLoadError as exc:
+        logging.error("startup blocked by invalid policy: %s", exc)
+        print(
+            "Startup failed: policy is invalid.\n"
+            f"- policy: {policy_path}\n"
+            f"- detail: {exc}\n"
+            "Run setup script to repair policy defaults."
+        )
+        return 2
     ui_lang = resolve_lang(runtime.policy.ui.language)
     handlers = TelegramHandlers(runtime, language=ui_lang)
 
@@ -125,10 +143,12 @@ def main() -> None:
     app.add_handler(CommandHandler("reject", handlers.reject))
     app.add_handler(CommandHandler("status", handlers.status))
     app.add_handler(CommandHandler("logs", handlers.logs))
+    app.add_handler(CallbackQueryHandler(handlers.inline_action, pattern=r"^(ap|rj|st|lg)\|"))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handlers.menu_text))
 
     app.run_polling(drop_pending_updates=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

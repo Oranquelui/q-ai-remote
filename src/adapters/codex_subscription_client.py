@@ -168,7 +168,8 @@ class CodexSubscriptionClient:
             + "\nAllowed path prefixes: "
             + ", ".join(allowed_prefixes)
             + "\nConstraints: workspace-relative paths only; no absolute paths; no UNC paths; "
-            "no parent traversal; no shell commands; no network operations.\n"
+            "no parent traversal; no shell commands; no network/file-transfer operations in the plan itself. "
+            "Use create_file only for clearly new paths. If a file may already exist, prefer patch_file.\n"
             "User request:\n"
             + request_text
         )

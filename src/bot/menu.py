@@ -7,47 +7,51 @@ from typing import Optional
 from telegram import ReplyKeyboardMarkup
 
 LANGS = ("ja", "en")
-MENU_ACTIONS = ("task_list", "continue_task", "new_task", "task_guide", "policy", "status", "logs")
+MENU_ACTIONS = ("task_list", "continue_task", "ask_chat", "new_task", "task_guide", "logs")
 
 MENU_TEXTS = {
     "ja": {
-        "task_list": "TASK一覧(直近20)",
-        "continue_task": "承認待ちTASK",
-        "new_task": "新規TASK開始",
-        "task_guide": "TASKの進め方",
-        "policy": "安全ポリシー",
-        "status": "接続/稼働状態",
-        "logs": "監査ログ",
+        "task_list": "TASK履歴",
+        "continue_task": "承認待ち",
+        "ask_chat": "自由質問",
+        "new_task": "新規TASK",
+        "task_guide": "使い方",
+        "logs": "実行ログ",
     },
     "en": {
-        "task_list": "TASK List (20)",
+        "task_list": "TASK History",
         "continue_task": "Pending TASKs",
-        "new_task": "Start New TASK",
-        "task_guide": "TASK Guide",
-        "policy": "Safety Policy",
-        "status": "Engine/Runtime",
-        "logs": "Audit Logs",
+        "ask_chat": "Ask Freely",
+        "new_task": "New TASK",
+        "task_guide": "How To Use",
+        "logs": "Run Logs",
     },
 }
 
 LEGACY_TEXT_ALIASES = {
+    "TASK一覧(直近20)": "task_list",
+    "承認待ちTASK": "continue_task",
+    "新規TASK開始": "new_task",
+    "TASKの進め方": "task_guide",
+    "監査ログ": "logs",
     "新規タスク作成": "new_task",
     "ポリシー確認": "policy",
     "状態確認": "status",
     "ログ確認": "logs",
     "使い方": "task_guide",
+    "自由質問": "ask_chat",
     "Create Task": "new_task",
     "Policy": "policy",
     "Status": "status",
     "Logs": "logs",
     "Help": "task_guide",
+    "Ask Freely": "ask_chat",
 }
 
 MENU_LAYOUT = (
-    ("task_list", "continue_task"),
-    ("new_task", "task_guide"),
-    ("policy", "status"),
-    ("logs",),
+    ("new_task", "continue_task"),
+    ("ask_chat", "task_list"),
+    ("logs", "task_guide"),
 )
 
 
@@ -87,9 +91,9 @@ def main_menu_markup(lang: str) -> ReplyKeyboardMarkup:
     labels = menu_labels(lang)
     keyboard = [[labels[action] for action in row] for row in MENU_LAYOUT]
     placeholder = (
-        "TASKを選択 / または依頼文をそのまま入力"
+        "自由質問またはTASKを選択 / そのまま入力も可"
         if resolve_lang(lang) == "ja"
-        else "Select TASK or type a request directly"
+        else "Ask freely or select TASK / typing is also OK"
     )
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
