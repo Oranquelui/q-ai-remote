@@ -15,6 +15,20 @@ Telegramで操作する、安全ガバナンス型のローカル作業アシス
 - 初心者向けIssue: `Issues` で `good first issue` ラベルを選択
 - 改善要望/不具合報告: `Issues > New issue` でテンプレートを選択
 
+### First PR Checklist 📝
+Before submitting your first PR, make sure you've completed these steps:
+
+- [ ] Found a `good first issue` or `help wanted` issue and commented to claim it
+- [ ] Created a descriptive branch name (e.g., `docs/fix-typo`, `feat/add-feature`)
+- [ ] Made your changes following the [Contributing Guide](CONTRIBUTING.md)
+- [ ] Ran tests locally: `python -m pytest -q`
+- [ ] Kept the PR focused on one purpose
+- [ ] Added or updated tests if needed
+- [ ] Filled out the PR template completely
+- [ ] No secrets, API keys, or sensitive data in your changes
+
+💡 **Tip**: If you're stuck, don't hesitate to ask questions in the Issue. We're here to help!
+
 ### 配布用パッケージを自動生成
 開発用の `tests/.taskmaster/data` などを除外し、配布に必要なファイルだけを出力します。
 
