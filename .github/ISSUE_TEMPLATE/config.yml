@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability report
-    url: https://github.com/Oranquelui/q-ai-remote-dev/security/policy
+    url: https://github.com/Oranquelui/q-ai-remote/security/policy
     about: Please report vulnerabilities privately first
