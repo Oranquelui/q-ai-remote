@@ -19,10 +19,15 @@ import yaml
 # Minimal set for end users.
 INCLUDE_FILES = [
     "README.md",
+    "CONTRIBUTING.md",
     "LICENSE",
     "SECURITY.md",
     "requirements.txt",
     ".gitignore",
+    ".github/pull_request_template.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
     "config/policy.yaml",
     "config/instances/.gitkeep",
     "docs/manual_beginner_ja.md",

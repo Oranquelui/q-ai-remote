@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest an improvement
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New ideas are welcome. Please describe user value and scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem does this solve?
+      placeholder: Users cannot ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What do you want to happen?
+      placeholder: Add a command that ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Another option is ...
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact level
+      options:
+        - Low (small quality-of-life improvement)
+        - Medium (noticeable workflow improvement)
+        - High (core workflow or security impact)
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Links, mockups, logs, examples

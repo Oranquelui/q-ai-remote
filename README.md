@@ -10,6 +10,11 @@ Telegramで操作する、安全ガバナンス型のローカル作業アシス
 - 紹介文テンプレ: [docs/intro_copy_ja.md](docs/intro_copy_ja.md)
 - 脆弱性報告ポリシー: [SECURITY.md](SECURITY.md)
 
+## Contributing
+- 参加ガイド: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 初心者向けIssue: `Issues` で `good first issue` ラベルを選択
+- 改善要望/不具合報告: `Issues > New issue` でテンプレートを選択
+
 ### 配布用パッケージを自動生成
 開発用の `tests/.taskmaster/data` などを除外し、配布に必要なファイルだけを出力します。
 
