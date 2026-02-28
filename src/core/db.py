@@ -93,6 +93,16 @@ class PlanStore:
             plan_json=row["plan_json"],
         )
 
+    def get_plan_owner_user_id(self, plan_id: str) -> Optional[int]:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT requested_by_user_id FROM plans WHERE plan_id = ?",
+                (plan_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return int(row["requested_by_user_id"])
+
     def update_status(self, plan_id: str, status: str, timestamp_col: Optional[str] = None) -> None:
         with self._conn() as conn:
             if timestamp_col:

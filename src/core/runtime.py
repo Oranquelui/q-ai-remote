@@ -125,6 +125,11 @@ class AppRuntime:
             limit = LimitPolicy(max_events=cfg.command_per_minute, window_sec=60)
         self.rates.check(user_id=user_id, channel=kind, policy=limit)
 
+    def _enforce_plan_owner(self, plan_id: str, user_id: int) -> None:
+        owner_user_id = self.store.get_plan_owner_user_id(plan_id)
+        if owner_user_id is None or owner_user_id != user_id:
+            raise ApprovalError("plan not found")
+
     def create_plan(self, request_text: str, user_id: int, chat_id: int) -> Plan:
         self._enforce_allowlist(user_id)
         self._check_rate(user_id, "plan")
@@ -150,6 +155,7 @@ class AppRuntime:
     ) -> tuple[ExecutionResult, ReportArtifact, Path]:
         self._enforce_allowlist(user_id)
         self._check_rate(user_id, "approve")
+        self._enforce_plan_owner(plan_id=plan_id, user_id=user_id)
 
         self.approval.approve(plan_id=plan_id, short_token=short_token)
         plan = self.approval.get_plan(plan_id)
@@ -222,6 +228,7 @@ class AppRuntime:
 
     def reject_plan(self, plan_id: str, user_id: int) -> str:
         self._enforce_allowlist(user_id)
+        self._enforce_plan_owner(plan_id=plan_id, user_id=user_id)
         out = self.approval.reject(plan_id)
         self.audit.append(
             plan_id=plan_id,
@@ -234,11 +241,13 @@ class AppRuntime:
     def get_status(self, plan_id: str, user_id: int) -> str:
         self._enforce_allowlist(user_id)
         self._check_rate(user_id, "command")
+        self._enforce_plan_owner(plan_id=plan_id, user_id=user_id)
         return self.approval.get_status(plan_id)
 
     def get_logs(self, plan_id: str, user_id: int) -> LogsView:
         self._enforce_allowlist(user_id)
         self._check_rate(user_id, "command")
+        self._enforce_plan_owner(plan_id=plan_id, user_id=user_id)
 
         row = self.store.get_audit_summary(plan_id)
         if row is None:

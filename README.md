@@ -98,6 +98,7 @@ python scripts/export_distribution.py --force
 - 実行可能操作は固定4種のみ
   - `list_dir/read_file/create_file/patch_file`
 - Allowed Paths 外アクセスは拒否
+- plan所有者以外は `approve/reject/status/logs` を実行不可
 - 任意コマンド実行・ネットワーク実行を禁止
 - 監査証跡を保存（JSONL hash-chain / HTML / diff）
 
