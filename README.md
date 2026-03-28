@@ -12,6 +12,8 @@ Telegramで操作する、安全ガバナンス型のローカル作業アシス
   - queue worker
   - cancel/retry/resume controls
   - schedule jobs and morning review flow
+- Release notes:
+  - [v0.9.8 release notes](docs/release_notes_v0.9.8.md)
 
 ## 配布方針 (日本語優先)
 - 配布は GitHub `Public` を推奨

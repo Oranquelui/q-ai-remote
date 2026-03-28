@@ -32,6 +32,7 @@ INCLUDE_FILES = [
     "config/instances/.gitkeep",
     "docs/manual_beginner_ja.md",
     "docs/intro_copy_ja.md",
+    "docs/release_notes_v0.9.8.md",
 ]
 INCLUDE_DIRS = [
     "src",
