@@ -24,6 +24,17 @@ class PlanRow:
     plan_json: str
 
 
+@dataclass(frozen=True)
+class RunRow:
+    run_id: str
+    plan_id: str
+    status: str
+    created_at: str
+    started_at: Optional[str]
+    finished_at: Optional[str]
+    last_error: Optional[str]
+
+
 class PlanStore:
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
@@ -196,6 +207,69 @@ class PlanStore:
                 """,
                 (plan_id,),
             ).fetchone()
+
+    def create_run(
+        self,
+        run_id: str,
+        plan_id: str,
+        status: str,
+        *,
+        started: bool = False,
+        last_error: Optional[str] = None,
+    ) -> None:
+        started_at_sql = "CURRENT_TIMESTAMP" if started else "NULL"
+        with self._conn() as conn:
+            conn.execute(
+                f"""
+                INSERT INTO runs (
+                    run_id, plan_id, status, created_at, started_at, last_error
+                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, {started_at_sql}, ?)
+                """,
+                (run_id, plan_id, status, last_error),
+            )
+
+    def update_run_status(
+        self,
+        run_id: str,
+        status: str,
+        *,
+        finished: bool = False,
+        last_error: Optional[str] = None,
+    ) -> None:
+        finished_at_sql = ", finished_at = CURRENT_TIMESTAMP" if finished else ""
+        with self._conn() as conn:
+            conn.execute(
+                f"""
+                UPDATE runs
+                SET status = ?, last_error = ?{finished_at_sql}
+                WHERE run_id = ?
+                """,
+                (status, last_error, run_id),
+            )
+
+    def get_latest_run(self, plan_id: str) -> Optional[RunRow]:
+        with self._conn() as conn:
+            row = conn.execute(
+                """
+                SELECT run_id, plan_id, status, created_at, started_at, finished_at, last_error
+                FROM runs
+                WHERE plan_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (plan_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return RunRow(
+            run_id=str(row["run_id"]),
+            plan_id=str(row["plan_id"]),
+            status=str(row["status"]),
+            created_at=str(row["created_at"]),
+            started_at=row["started_at"],
+            finished_at=row["finished_at"],
+            last_error=row["last_error"],
+        )
 
     def list_plans_for_user(self, user_id: int, limit: int = 20, status: Optional[str] = None) -> list[sqlite3.Row]:
         safe_limit = max(1, min(int(limit), 50))

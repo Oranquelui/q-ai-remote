@@ -28,7 +28,8 @@ telegram:
     include_file_body: false
     include_diff_summary: true
 users:
-  allowlist_user_ids: []
+  allowlist_user_ids:
+  - 1476109904
   fail_closed_when_empty: true
 rate_limit:
   command_per_minute: 20

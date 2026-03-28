@@ -72,3 +72,27 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_plan_id ON events(plan_id);
 CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
 CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
+
+CREATE TABLE IF NOT EXISTS runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id TEXT NOT NULL UNIQUE,
+  plan_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (
+    status IN (
+      'QUEUED',
+      'RUNNING',
+      'WAITING_INPUT',
+      'COMPLETED',
+      'FAILED',
+      'CANCELLED'
+    )
+  ),
+  created_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT,
+  last_error TEXT,
+  FOREIGN KEY (plan_id) REFERENCES plans(plan_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_runs_plan_id ON runs(plan_id);
+CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);

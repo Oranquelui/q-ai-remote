@@ -3,6 +3,16 @@
 旧称: Q CodeAnzenn。
 Telegramで操作する、安全ガバナンス型のローカル作業アシスタントです。
 
+## Latest Update
+- Release target: `v0.9.8`
+- Newly landed foundation:
+  - async run-state contract (`QUEUED/RUNNING/WAITING_INPUT/COMPLETED/FAILED/CANCELLED`)
+  - persisted run records in runtime/database layer
+- Current focus:
+  - queue worker
+  - cancel/retry/resume controls
+  - schedule jobs and morning review flow
+
 ## 配布方針 (日本語優先)
 - 配布は GitHub `Public` を推奨
 - ライセンスは `MIT`（このリポジトリに `LICENSE` を同梱）
@@ -14,18 +24,6 @@ Telegramで操作する、安全ガバナンス型のローカル作業アシス
 - 参加ガイド: [CONTRIBUTING.md](CONTRIBUTING.md)
 - 初心者向けIssue: `Issues` で `good first issue` ラベルを選択
 - 改善要望/不具合報告: `Issues > New issue` でテンプレートを選択
-
-## First PR Checklist
-
-Welcome! If this is your first pull request, here's a quick checklist to help you get started:
-
-- [ ] **Fork** this repository and clone it to your local machine
-- [ ] **Create a new branch** for your changes (e.g., `git checkout -b my-fix`)
-- [ ] **Keep changes focused** — one fix or feature per PR makes review easier
-- [ ] **Run tests** if available, and make sure nothing is broken
-- [ ] **Write a clear PR description** explaining what you changed and why
-- [ ] **Check the PR template** and fill in all relevant sections
-- [ ] Read [CONTRIBUTING.md](CONTRIBUTING.md) for full contribution guidelines
 
 ### 配布用パッケージを自動生成
 開発用の `tests/.taskmaster/data` などを除外し、配布に必要なファイルだけを出力します。

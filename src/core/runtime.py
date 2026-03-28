@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
+from secrets import token_hex
 
 from src.adapters.chat_factory import create_chat_client
 from src.adapters.planner_factory import create_planner_client
@@ -159,6 +161,8 @@ class AppRuntime:
 
         self.approval.approve(plan_id=plan_id, short_token=short_token)
         plan = self.approval.get_plan(plan_id)
+        run_id = self._new_run_id()
+        self.store.create_run(run_id=run_id, plan_id=plan.plan_id, status="RUNNING", started=True)
 
         self.audit.append(
             plan_id=plan_id,
@@ -172,6 +176,7 @@ class AppRuntime:
             result = self.executor.execute_approved_plan(plan)
         except RuntimeError as exc:
             duration_ms = int((time.perf_counter() - exec_started) * 1000)
+            self.store.update_run_status(run_id=run_id, status="FAILED", finished=True, last_error=str(exc))
             self.audit.append(
                 plan_id=plan.plan_id,
                 event_type="EXECUTION_FAILED",
@@ -195,6 +200,7 @@ class AppRuntime:
             )
             raise
 
+        self.store.update_run_status(run_id=run_id, status="COMPLETED", finished=True)
         for op in result.op_summaries:
             self.audit.append(
                 plan_id=plan.plan_id,
@@ -225,6 +231,10 @@ class AppRuntime:
             duration_ms=result.duration_ms,
         )
         return result, report, jsonl_path
+
+    def _new_run_id(self) -> str:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        return f"run_{timestamp}_{token_hex(4)}"
 
     def reject_plan(self, plan_id: str, user_id: int) -> str:
         self._enforce_allowlist(user_id)
